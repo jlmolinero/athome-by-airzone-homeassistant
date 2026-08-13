@@ -68,6 +68,8 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
         self._light = light
         self._state: int | None = light.state
         self._supports_brightness = int(light.dimmer or 0) == 1
+        self._attr_supported_color_modes = {ColorMode.BRIGHTNESS} if self._supports_brightness else {ColorMode.ONOFF}
+        self._attr_color_mode = ColorMode.BRIGHTNESS if self._supports_brightness else ColorMode.ONOFF
         self._attr_name = light.name
         self._attr_unique_id = f"{light.unique_id_base}:light"
         self._attr_icon = "mdi:lightbulb"
@@ -93,13 +95,11 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
 
     @property
     def color_mode(self) -> ColorMode | None:
-        if not self.is_on:
-            return None
         return ColorMode.BRIGHTNESS if self._supports_brightness else ColorMode.ONOFF
 
     @property
     def brightness(self) -> int | None:
-        if not self._supports_brightness or self._state is None or self._state <= 0:
+        if not self._supports_brightness or self._state is None:
             return None
         return round(max(0, min(100, int(self._state))) * 255 / 100)
 
