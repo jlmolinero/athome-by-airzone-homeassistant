@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime secrets/state
+session.json
+blind_timings.json
+*.log
+
+# Home Assistant / local
+.storage/
+secrets.yaml
+known_devices.yaml
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

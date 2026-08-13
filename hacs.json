@@ -1,0 +1,6 @@
+{
+  "name": "AtHome by Airzone",
+  "render_readme": true,
+  "domains": ["athome_persianas"],
+  "homeassistant": "2024.1.0"
+}
