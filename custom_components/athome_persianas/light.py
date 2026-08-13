@@ -56,8 +56,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreEntity, LightEntity):
     _attr_has_entity_name = True
-    _attr_color_mode = ColorMode.BRIGHTNESS
-    _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
     def __init__(
         self,
@@ -69,6 +67,7 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
         self._script = script_config
         self._light = light
         self._state: int | None = light.state
+        self._supports_brightness = int(light.dimmer or 0) == 1
         self._attr_name = light.name
         self._attr_unique_id = f"{light.unique_id_base}:light"
         self._attr_icon = "mdi:lightbulb"
@@ -89,8 +88,18 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
         return int(self._state) > 0
 
     @property
+    def supported_color_modes(self) -> set[ColorMode]:
+        return {ColorMode.BRIGHTNESS} if self._supports_brightness else {ColorMode.ONOFF}
+
+    @property
+    def color_mode(self) -> ColorMode | None:
+        if not self.is_on:
+            return None
+        return ColorMode.BRIGHTNESS if self._supports_brightness else ColorMode.ONOFF
+
+    @property
     def brightness(self) -> int | None:
-        if self._state is None:
+        if not self._supports_brightness or self._state is None or self._state <= 0:
             return None
         return round(max(0, min(100, int(self._state))) * 255 / 100)
 
@@ -101,6 +110,8 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
             ATTR_COMPONENT_ID: self._light.component_id,
             ATTR_LIGHT_NAME: self._light.name,
             ATTR_DIMMER: self._light.dimmer,
+            "brightness_supported": self._supports_brightness,
+            "brightness_percent": None if self._state is None else max(0, min(100, int(self._state))),
         }
 
     async def async_added_to_hass(self) -> None:
@@ -122,8 +133,10 @@ class AthomeAirzoneLight(CoordinatorEntity[AthomePersianasCoordinator], RestoreE
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         brightness = kwargs.get(ATTR_BRIGHTNESS)
-        if brightness is not None:
+        if brightness is not None and self._supports_brightness:
             target_state = round(int(brightness) * 100 / 255)
+            if target_state <= 0:
+                target_state = 1
         elif self._state is None or self._state <= 0:
             target_state = 100
         else:
