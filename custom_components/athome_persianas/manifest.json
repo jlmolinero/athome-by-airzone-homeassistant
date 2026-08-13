@@ -1,7 +1,7 @@
 {
   "domain": "athome_persianas",
   "name": "AtHome by Airzone",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "config_flow": true,
   "documentation": "https://github.com/jlmolinero/athome-by-airzone-homeassistant",
   "issue_tracker": "https://github.com/jlmolinero/athome-by-airzone-homeassistant/issues",

@@ -13,11 +13,13 @@ def build_parser(
     auth_base_url: str,
     web_base_url: str,
     cmd_discover_blinds: CommandHandler,
+    cmd_discover_lights: CommandHandler,
     cmd_seed_blind_timings: CommandHandler,
     cmd_session_help: CommandHandler,
     cmd_calibrate_blind_timings: CommandHandler,
     cmd_inspect_blind: CommandHandler,
     cmd_set_blind: CommandHandler,
+    cmd_set_light: CommandHandler,
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Client for discovering and controlling blinds in ATHome / Airzone Cloud.")
     parser.add_argument("--email", help="ATHome email (if ATHOME_EMAIL is not set)")
@@ -34,6 +36,10 @@ def build_parser(
     p = sub.add_parser("discover-blinds", help="Discover zones and list detected blinds")
     p.add_argument("--json", action="store_true", help="Return JSON output")
     p.set_defaults(func=cmd_discover_blinds)
+
+    p = sub.add_parser("discover-lights", help="Discover zones and list detected lights")
+    p.add_argument("--json", action="store_true", help="Return JSON output")
+    p.set_defaults(func=cmd_discover_lights)
 
     p = sub.add_parser("seed-blind-timings", help="Populate the timing file for all blinds using a base profile")
     p.set_defaults(func=cmd_seed_blind_timings)
@@ -57,6 +63,14 @@ def build_parser(
     p.add_argument("--action", required=True, help="upload, download, stop, slat0, slat45, or slat90")
     p.add_argument("--state", type=int, help="Target percentage 0-100; intermediate values use calibrated timings")
     p.set_defaults(func=cmd_set_blind)
+
+    p = sub.add_parser("set-light", help="Set a specific AtHome light on, off, or to a brightness percent")
+    p.add_argument("--zone-id", dest="zone_id", type=int, required=True, help="Zone ID")
+    p.add_argument("--component-id", dest="component_id", type=int, required=True, help="Component ID")
+    p.add_argument("--state", type=int, help="Light state/brightness percentage 0-100")
+    p.add_argument("--on", dest="turn_on", action="store_true", help="Turn the light on")
+    p.add_argument("--off", dest="turn_off", action="store_true", help="Turn the light off")
+    p.set_defaults(func=cmd_set_light)
 
     return parser
 

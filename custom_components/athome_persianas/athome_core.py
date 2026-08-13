@@ -447,9 +447,10 @@ def _load_session(args: argparse.Namespace, client: AirzoneClient) -> SessionCon
 
 def _load_system_via_api_or_browser(args: argparse.Namespace, client: AirzoneClient, *, allow_browser_fallback: bool = True) -> tuple[dict[str, Any], SessionContext]:
     has_session_json = bool(args.session_json or os.environ.get("ATHOME_SESSION_JSON"))
+    has_local_session_json = SESSION_JSON_PATH.exists()
     has_device_id = bool(args.device_id or os.environ.get("ATHOME_DEVICE_ID"))
-    if has_session_json or has_device_id:
-        if not has_session_json and (not client.token or not client.user_id):
+    if has_session_json or has_local_session_json or has_device_id:
+        if not has_session_json and not has_local_session_json and (not client.token or not client.user_id):
             client.login()
         session = _load_session(args, client)
         client.token = session.user_token

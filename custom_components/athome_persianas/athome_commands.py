@@ -374,6 +374,58 @@ def cmd_discover_blinds(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_discover_lights(args: argparse.Namespace) -> int:
+    email, password = _load_optional_credentials(args)
+    client = AirzoneClient(email=email, password=password, auth_base_url=args.auth_base_url, web_base_url=args.web_base_url)
+    system, _session = _load_system_via_api_or_browser(args, client)
+    zones = _extract_list(system, "zones") or []
+    light_entries: list[dict[str, Any]] = []
+    json_mode = bool(getattr(args, "json", False))
+    if not json_mode:
+        print(f"Zones found: {len(zones)}")
+    for zone in zones:
+        zone_id = zone.get("zoneID")
+        zone_name = zone.get("name") or f"Zone {zone_id}"
+        lights = zone.get("lights") or []
+        if not lights:
+            continue
+        current_by_component: dict[int, dict[str, Any]] = {}
+        try:
+            current_components = client.get_components(_session, int(zone_id), 1)
+            if isinstance(current_components, list):
+                for item in current_components:
+                    if not isinstance(item, dict) or item.get("componentID") is None:
+                        continue
+                    current_by_component[int(str(item.get("componentID")))] = item
+        except Exception:
+            current_by_component = {}
+        if not json_mode:
+            print(f"\n== {zone_name} [{zone_id}] ==")
+        for light in lights:
+            component_id = light.get("componentID")
+            current = current_by_component.get(int(component_id)) if component_id is not None else None
+            merged = {**light, **current} if isinstance(current, dict) else light
+            light_name = light.get("name") or "(unnamed)"
+            if not json_mode:
+                print(f"  [LIGHT] {light_name} [componentID={component_id}] state={merged.get('state')} dimmer={merged.get('dimmer')}")
+            light_entries.append(
+                {
+                    "zone_id": zone_id,
+                    "zone_name": zone_name,
+                    "component_id": component_id,
+                    "light_name": light_name,
+                    "state": merged.get("state"),
+                    "dimmer": merged.get("dimmer"),
+                    "raw": merged,
+                }
+            )
+    if json_mode:
+        _print_json({"ok": True, "count": len(light_entries), "zones": zones, "lights": light_entries})
+    else:
+        print(f"\nTotal lights: {len(light_entries)}")
+    return 0
+
+
 def cmd_inspect_blind(args: argparse.Namespace) -> int:
     email, password = _load_optional_credentials(args)
     client = AirzoneClient(email=email, password=password, auth_base_url=args.auth_base_url, web_base_url=args.web_base_url)
@@ -530,6 +582,61 @@ def cmd_set_blind(args: argparse.Namespace) -> int:
             "state": state_value,
             "result": result,
             "timing_profile": _get_blind_timing_profile(timings, args.zone_id, args.component_id),
+        }
+    )
+    return 0
+
+
+def cmd_set_light(args: argparse.Namespace) -> int:
+    email, password = _load_optional_credentials(args)
+    client = AirzoneClient(email=email, password=password, auth_base_url=args.auth_base_url, web_base_url=args.web_base_url)
+    try:
+        session = _load_session(args, client)
+        client.token = session.user_token
+        client.user_id = session.user_id
+        system = client.get_system(session)
+    except RuntimeError as exc:
+        raise RuntimeError(
+            "AtHome web session is missing or could not query the portal. Create or refresh "
+            "/config/custom_components/athome_persianas/session.json from localStorage['Zhome.session']. "
+            f"Detail: {exc}"
+        ) from exc
+
+    zones = _extract_list(system, "zones") or []
+    zone = next((z for z in zones if int(z.get("zoneID", -1)) == int(args.zone_id)), None)
+    if zone is None:
+        raise RuntimeError(f"zoneID={args.zone_id} does not exist in the session.")
+    light = next((item for item in zone.get("lights", []) or [] if int(item.get("componentID", -1)) == int(args.component_id)), None)
+    if light is None:
+        raise RuntimeError(f"No light componentID={args.component_id} exists in zoneID={args.zone_id}.")
+
+    if args.state is not None:
+        state = max(0, min(100, int(args.state)))
+    elif args.turn_on:
+        state = int(light.get("state") or 100)
+        if state <= 0:
+            state = 100
+    elif args.turn_off:
+        state = 0
+    else:
+        raise RuntimeError("Use --on, --off, or --state 0-100.")
+
+    result = client.update_component(
+        session=session,
+        zone_id=args.zone_id,
+        type_id=1,
+        component_id=args.component_id,
+        property_name="state",
+        value=state,
+    )
+    _print_json(
+        {
+            "ok": True,
+            "zone_id": args.zone_id,
+            "component_id": args.component_id,
+            "light_name": light.get("name") or f"component-{args.component_id}",
+            "state": state,
+            "result": result,
         }
     )
     return 0

@@ -46,6 +46,20 @@ class BlindEntry:
 
 
 @dataclass(frozen=True)
+class LightEntry:
+    name: str
+    zone_id: int
+    component_id: int
+    state: int | None = None
+    dimmer: int | None = None
+    zone_name: str | None = None
+
+    @property
+    def unique_id_base(self) -> str:
+        return f"light:{self.zone_id}:{self.component_id}"
+
+
+@dataclass(frozen=True)
 class ScriptConfig:
     script_path: str
     python_path: str = DEFAULT_PYTHON_PATH
@@ -151,6 +165,33 @@ def _blind_entries_from_json(result: Any) -> list[BlindEntry]:
     return blinds
 
 
+def _light_entries_from_json(result: Any) -> list[LightEntry]:
+    lights: list[LightEntry] = []
+    if not isinstance(result, dict):
+        return lights
+    for raw in result.get("lights", []) or []:
+        try:
+            zone_id = int(raw.get("zone_id") or raw.get("zoneID") or 0)
+            component_id = int(raw.get("component_id") or raw.get("componentID") or 0)
+        except Exception:
+            continue
+        if not zone_id or not component_id:
+            continue
+        state = raw.get("state")
+        dimmer = raw.get("dimmer")
+        lights.append(
+            LightEntry(
+                name=str(raw.get("light_name") or raw.get("name") or f"Light {component_id}"),
+                zone_id=zone_id,
+                component_id=component_id,
+                state=int(state) if state is not None else None,
+                dimmer=int(dimmer) if dimmer is not None else None,
+                zone_name=str(raw.get("zone_name") or "") or None,
+            )
+        )
+    return lights
+
+
 def load_timing_profiles(timings_path: str | None) -> dict[str, Any]:
     if not timings_path:
         return {}
@@ -194,6 +235,19 @@ async def async_discover_blinds(script: ScriptConfig) -> tuple[list[BlindEntry],
         LOGGER.info("No timings fallback path configured")
 
     LOGGER.warning("No blinds discovered from live portal or timings fallback")
+    return [], "none"
+
+
+async def async_discover_lights(script: ScriptConfig) -> tuple[list[LightEntry], str]:
+    try:
+        result = await async_run_script(script, "discover-lights", "--json")
+        lights = _light_entries_from_json(result)
+        if lights:
+            LOGGER.info("Discovered %d lights from live portal data", len(lights))
+            return lights, "live portal"
+        LOGGER.warning("Live portal discovery returned no lights")
+    except Exception:
+        LOGGER.info("Live portal light discovery failed", exc_info=True)
     return [], "none"
 
 

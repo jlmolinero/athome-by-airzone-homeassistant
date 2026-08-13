@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "athome_persianas"
-PLATFORMS = ["cover", "select", "button"]
+PLATFORMS = ["cover", "select", "button", "light"]
 
 CONF_SCRIPT_PATH = "script_path"
 CONF_PYTHON_PATH = "python_path"
@@ -28,6 +28,8 @@ ATTR_ZONE_ID = "zone_id"
 ATTR_COMPONENT_ID = "component_id"
 ATTR_SLAT = "slat"
 ATTR_BLIND_NAME = "blind_name"
+ATTR_LIGHT_NAME = "light_name"
+ATTR_DIMMER = "dimmer"
 
 SLAT_OPTIONS = ["0°", "45°", "90°"]
 SLAT_ACTIONS = {

@@ -9,7 +9,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .common import ScriptConfig, async_discover_blinds, async_run_script
+from .common import ScriptConfig, async_discover_blinds, async_discover_lights, async_run_script
 from .const import DOMAIN
 
 LOGGER = logging.getLogger(__name__)
@@ -28,8 +28,15 @@ class AthomePersianasCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         blinds, source = await async_discover_blinds(self.script_config)
-        LOGGER.info("Coordinator refresh discovered %d blinds via %s", len(blinds), source)
-        return {"blinds": blinds}
+        lights, light_source = await async_discover_lights(self.script_config)
+        LOGGER.info(
+            "Coordinator refresh discovered %d blinds via %s and %d lights via %s",
+            len(blinds),
+            source,
+            len(lights),
+            light_source,
+        )
+        return {"blinds": blinds, "lights": lights}
 
     async def async_calibrate_all(self) -> Any:
         return await async_run_script(self.script_config, "calibrate-blind-timings")

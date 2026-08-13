@@ -1,16 +1,18 @@
 # AtHome by Airzone for Home Assistant
 
-Custom Home Assistant integration for AtHome by Airzone blinds and shutters.
+Custom Home Assistant integration for AtHome by Airzone blinds, shutters, and lights.
 
-This integration discovers AtHome/Airzone blind components, creates Home Assistant `cover` entities, and creates `select` entities for slat angle only on blinds that actually support louver/slat control.
+This integration discovers AtHome/Airzone blind and light components. It creates Home Assistant `cover` entities for blinds, `select` entities for slat angle only on blinds that actually support louver/slat control, and `light` entities for AtHome light channels such as `Canaleja Salón`.
 
 > Unofficial project: this repository is not affiliated with or endorsed by Airzone.
 
 ## Features
 
 - One `cover` entity per discovered blind/shutter.
+- One `light` entity per discovered AtHome light.
 - Slat angle `select` entities only for louver-capable blinds.
 - Open, close, stop, and set-position support.
+- Light on/off and brightness/state support for dimmable AtHome lights.
 - Timing calibration button for calculating open/close travel times.
 - Uses the AtHome web session/API directly from Home Assistant; no Playwright browser is required inside Home Assistant OS for normal control.
 
